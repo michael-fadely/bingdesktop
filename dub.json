@@ -1,0 +1,12 @@
+{
+	"name": "bingdesktop",
+	"authors": [
+		"Michael Fadely"
+	],
+	"dependencies": {
+		"jsonizer": "~>0.7.3"
+	},
+	"description": "Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.",
+	"copyright": "Copyright © 2016, Michael Fadely",
+	"license": "MIT"
+}
