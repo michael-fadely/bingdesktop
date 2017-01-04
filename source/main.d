@@ -101,7 +101,7 @@ int main(string[] args)
 			&allowOverwrite,
 
 			"mode|m",
-			`Wallpaper selection mode. Valid options are "new" (first new wallpaper) and "newest". `
+			`Wallpaper selection mode. Valid options are "new" (first new wallpaper) and "newest".`
 			~ `Default mode is "none"`,
 			&wallpaperMode
 		);
@@ -267,7 +267,8 @@ int checkFiles()
 							throw new Exception("WHAT EVEN");
 
 						case WallpaperMode.newest:
-							setWallpaper(newpath);
+							wallpaperFilename = newpath;
+							wallpaperMode = WallpaperMode.none;
 							break;
 						case WallpaperMode.first:
 							wallpaperFilename = newpath;
@@ -284,7 +285,7 @@ int checkFiles()
 		}
 
 		// Use the last set "first" new wallpaper string, then set it.
-		if (wallpaperMode == WallpaperMode.first && !wallpaperFilename.empty)
+		if (!wallpaperFilename.empty)
 		{
 			setWallpaper(wallpaperFilename);
 		}
@@ -310,8 +311,7 @@ void setWallpaper(string filename)
 	else version (linux)
 	{
 		import std.process;
-		executeShell("gsettings set org.gnome.desktop.background picture-uri file://"
-			~ asAbsolutePath(filename).array);
+		executeShell(`gsettings set org.gnome.desktop.background picture-uri "file://` ~ absolutePath(filename, "/") ~ `"`);
 	}
 	else
 	{
