@@ -28,14 +28,14 @@ struct BingWallpaper
 	mixin JsonizeMe;
 
 @jsonize:
-	uint   id;
+	uint id;
 	string url;
 	string query;
 	string date;
 	string category;
 	string copyright;
-	uint   width;
-	uint   height;
+	uint width;
+	uint height;
 	string thumbnail;
 	string orgpage;
 	string author;
@@ -48,8 +48,8 @@ struct BingWallpaper
 	string checksum;
 }
 
-const string jsonNew  = "bing-desktop.json";
-const string jsonOld  = "bing-desktop.old";
+const string jsonNew = "bing-desktop.json";
+const string jsonOld = "bing-desktop.old";
 
 string jsonUrl = "http://az542455.vo.msecnd.net/bing/en-us";
 string outDir;
@@ -60,8 +60,7 @@ bool forceDownload;
 bool allowOverwrite;
 auto wallpaperMode = WallpaperMode.newest;
 
-const string usage_str =
-`Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
+const string usage_str = `Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
 
 Usage:
 	bingdesktop [options]
@@ -80,32 +79,15 @@ int main(string[] args)
 {
 	try
 	{
-		auto result = getopt(args,
-			"url|u",
-			"The URL to the Bing Desktop metadata json.",
-			&jsonUrl,
-
-			"output|o",
-			"Directory to save wallpapers.",
-			&outDir,
-
-			"no-pause|n",
-			"Disable pause at the end of the program.", 
-			&noPause,
-
-			"force-check|f",
-			"Skip date validation and just download all wallpapers.",
-			&forceDownload,
-
-			"overwrite",
-			"Allow wallpapers to be re-downloaded and overwritten.",
-			&allowOverwrite,
-
-			"mode|m",
-			`Wallpaper selection mode. Valid options are "new" (first new wallpaper) and "newest".`
-			~ `Default mode is "none"`,
-			&wallpaperMode
-		);
+		auto result = getopt(args, "url|u",
+				"The URL to the Bing Desktop metadata json.",
+				&jsonUrl, "output|o", "Directory to save wallpapers.", &outDir, "no-pause|n",
+				"Disable pause at the end of the program.",
+				&noPause, "force-check|f",
+				"Skip date validation and just download all wallpapers.", &forceDownload, "overwrite",
+				"Allow wallpapers to be re-downloaded and overwritten.", &allowOverwrite, "mode|m",
+				`Wallpaper selection mode. Valid options are "new" (first new wallpaper) and "newest".`
+				~ `Default mode is "none"`, &wallpaperMode);
 
 		if (result.helpWanted)
 		{
@@ -153,7 +135,7 @@ int main(string[] args)
 	}
 	else if (checkFiles())
 	{
-		
+
 		return -1;
 	}
 
@@ -180,9 +162,8 @@ auto hashFile(in string path)
 
 // See isValidFilename in std.path
 Range makeValidFilename(Range)(Range filename)
-	if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
-		 isNarrowString!Range) &&
-		!isConvertibleToString!Range)
+		if (((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range
+			&& isSomeChar!(ElementEncodingType!Range)) || isNarrowString!Range) && !isConvertibleToString!Range)
 {
 	Appender!Range result;
 
@@ -193,15 +174,15 @@ Range makeValidFilename(Range)(Range filename)
 			switch (c)
 			{
 				case 0: .. case 31:
-				case '<':
-				case '>':
-				case ':':
-				case '"':
-				case '/':
-				case '\\':
-				case '|':
-				case '?':
-				case '*':
+					case '<':
+					case '>':
+					case ':':
+					case '"':
+					case '/':
+					case '\\':
+					case '|':
+					case '?':
+					case '*':
 					result.put('_');
 					break;
 
@@ -313,7 +294,8 @@ void setWallpaper(string filename)
 		bool result;
 		for (size_t i; i < 4 && !result; i++)
 		{
-			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)filename.toStringz(), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) > 0;
+			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0,
+					cast(void*)filename.toStringz(), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) > 0;
 
 			if (!result)
 			{
@@ -325,7 +307,9 @@ void setWallpaper(string filename)
 	else version (linux)
 	{
 		import std.process : executeShell;
-		executeShell(`gsettings set org.gnome.desktop.background picture-uri "file://` ~ absolutePath(filename, "/") ~ `"`);
+
+		executeShell(`gsettings set org.gnome.desktop.background picture-uri "file://`
+				~ absolutePath(filename, "/") ~ `"`);
 	}
 	else
 	{
