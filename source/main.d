@@ -53,11 +53,12 @@ const string jsonOld  = "bing-desktop.old";
 
 string jsonUrl = "http://az542455.vo.msecnd.net/bing/en-us";
 string outDir;
-bool   downloadExists;
-bool   noPause;
-bool   forceDownload;
-bool   allowOverwrite;
-auto   wallpaperMode = WallpaperMode.newest;
+
+bool downloadExists;
+bool noPause;
+bool forceDownload;
+bool allowOverwrite;
+auto wallpaperMode = WallpaperMode.newest;
 
 const string usage_str =
 `Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
@@ -304,13 +305,26 @@ void setWallpaper(string filename)
 {
 	version (Windows)
 	{
+		import core.thread;
 		import core.sys.windows.windows;
+
 		wallpaperMode = WallpaperMode.none;
-		SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)filename.toStringz(), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+
+		bool result;
+		for (size_t i; i < 4 && !result; i++)
+		{
+			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)filename.toStringz(), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) > 0;
+
+			if (!result)
+			{
+				stderr.writeln("Failed to set wallpaper.");
+				Thread.sleep(250.msecs);
+			}
+		}
 	}
 	else version (linux)
 	{
-		import std.process;
+		import std.process : executeShell;
 		executeShell(`gsettings set org.gnome.desktop.background picture-uri "file://` ~ absolutePath(filename, "/") ~ `"`);
 	}
 	else
