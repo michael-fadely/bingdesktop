@@ -16,57 +16,89 @@ import std.traits;
 
 import jsonizer;
 
+/// Defines the wallpaper application mode.
 enum WallpaperMode
 {
+	/// Don't apply the new wallpaper; just download.
 	none,
+	/// Apply the first new wallpaper downloaded since the last run.
 	first,
+	/// Always apply the latest wallpaper.
 	newest,
 }
 
+/// Represents the Bing Wallpaper json metadata.
 struct BingWallpaper
 {
 	mixin JsonizeMe;
 
 @jsonize:
+	/// Incremental image ID.
 	uint id;
+	/// URL of the image.
 	string url;
+	/// Simple image name.
 	string query;
+	/// Date the image was published.
 	string date;
+	/// Image category.
 	string category;
+	/// Image copyright.
 	string copyright;
+	/// Image width.
 	uint width;
+	/// Image height.
 	uint height;
+	/// Image thumbnail URL.
 	string thumbnail;
+	/// Organization page.
 	string orgpage;
+	/// Image author.
 	string author;
+	/// Author homepage if applicable.
 	string authorlink;
+	/// Link for image license.
 	string licenselink;
+	/// Image title.
 	string title;
+	/// Image license.
 	string license;
+	/// Thumbnail width.
 	string thnwidth;
+	/// Thumbnail height.
 	string thnheight;
+	/// Image checksum (unknown type).
 	string checksum;
 }
 
+/// File name/path to store the metadata json.
 const string jsonNew = "bing-desktop.json";
+/// Backup json for detecting new entries.
 const string jsonOld = "bing-desktop.old";
 
+/// URL to pull the metadata json from.
 string jsonUrl = "http://az542455.vo.msecnd.net/bing/en-us";
+/// Output directory to store the downloaded wallpapers.
 string outDir;
 
-bool downloadExists;
+/// Disables console pausing.
 bool noPause;
+/// Skip date validation and just download all wallpapers.
 bool forceDownload;
+/// Allow wallpapers to be re-downloaded and overwritten.
 bool allowOverwrite;
+/// Wallpaper application mode for this session.
 auto wallpaperMode = WallpaperMode.newest;
 
-const string usage_str = `Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
+private const string usageText =
+`Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
 
 Usage:
 	bingdesktop [options]
 
 Options:`;
 
+/// If `!noPause`, pauses the console output.
 void pause()
 {
 	if (!noPause)
@@ -109,7 +141,7 @@ int main(string[] args)
 		{
 			auto wangis = appender!string;
 			defaultGetoptFormatter(wangis, null, result.options);
-			stdout.write(usage_str);
+			stdout.write(usageText);
 			wangis.data.splitLines().each!(x => stdout.writefln("\t%s", x));
 			return 0;
 		}
@@ -139,8 +171,8 @@ int main(string[] args)
 		{
 			if (forceDownload || hashFile(jsonNew) != hashFile(jsonOld))
 			{
-				stdout.writeln("Downloading new images...");
-				checkFiles();
+				stdout.writeln("DoDownloads all available wallpapers.wnloading new images...");
+				downloadWallpapers();
 			}
 			else
 			{
@@ -150,7 +182,7 @@ int main(string[] args)
 		}
 		else
 		{
-			checkFiles();
+			downloadWallpapers();
 		}
 	}
 	catch (Exception ex)
@@ -167,12 +199,13 @@ int main(string[] args)
 	return 0;
 }
 
+/// Produces a SHA256 hash for a given file path.
 ubyte[32] hashFile(in string path)
 {
 	auto file = File(path, "rb");
 	SHA256 digest;
 
-	foreach (ubyte[] buffer; file.byChunk(4096))
+	foreach (ubyte[] buffer; file.byChunk(32 * 1024))
 	{
 		digest.put(buffer);
 	}
@@ -181,7 +214,7 @@ ubyte[32] hashFile(in string path)
 	return result;
 }
 
-// See isValidFilename in std.path
+/// See isValidFilename in std.path
 Range makeValidFilename(Range)(Range filename)
 		if (((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range
 			&& isSomeChar!(ElementEncodingType!Range)) || isNarrowString!Range) && !isConvertibleToString!Range)
@@ -221,7 +254,8 @@ Range makeValidFilename(Range)(Range filename)
 	return result.data;
 }
 
-void checkFiles()
+/// Downloads all available wallpapers.
+void downloadWallpapers()
 {
 	auto text = readText(jsonNew);
 	auto file = fromJSONString!(BingWallpaper[])(text);
@@ -236,11 +270,11 @@ void checkFiles()
 		}
 
 		// Format is YYYY-MM-DD query.jpg
-		string name = format("%s-%s-%s %s.jpg", i.date[0 .. 4], i.date[4 .. 6], i.date[6 .. 8], i.query.strip());
+		string name = format!("%s-%s-%s %s.jpg")(i.date[0 .. 4], i.date[4 .. 6], i.date[6 .. 8], i.query.strip());
 
-		name = name.makeValidFilename();
+		name = makeValidFilename(name);
 
-		string oldpath = buildNormalizedPath(outDir, format("%d.jpg", i.id));
+		string oldpath = buildNormalizedPath(outDir, format!("%d.jpg")(i.id));
 		string newpath = buildNormalizedPath(outDir, name);
 
 		// If the file has been copied with its original ID name,
@@ -288,7 +322,9 @@ void checkFiles()
 	}
 }
 
-void setWallpaper(string filename)
+/// Sets the wallpaper.
+/// Works on Windows and Linux with Gnome.
+void setWallpaper(in string filename)
 {
 	version (Windows)
 	{
