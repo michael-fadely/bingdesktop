@@ -32,7 +32,7 @@ struct BingWallpaper
 {
 	mixin JsonizeMe;
 
-@jsonize:
+	@jsonize:
 	/// Incremental image ID.
 	uint id;
 	/// URL of the image.
@@ -112,30 +112,30 @@ int main(string[] args)
 	try
 	{
 		auto result = getopt(args,
-				"url|u",
-				"The URL to the Bing Desktop metadata json.",
-				&jsonUrl,
-				
-				"output|o",
-				"Directory to save wallpapers.",
-				&outDir,
-				
-				"no-pause|n",
-				"Disable pause at the end of the program.",
-				&noPause,
-				
-				"force-check|f",
-				"Skip date validation and just download all wallpapers.",
-				&forceDownload,
-				
-				"overwrite",
-				"Allow wallpapers to be re-downloaded and overwritten.",
-				&allowOverwrite,
-				
-				"mode|m",
-				`Wallpaper selection mode. Valid options are "new" (first new wallpaper) and "newest".`
-				~ `Default mode is "none"`,
-				&wallpaperMode);
+		                     "url|u",
+		                     "The URL to the Bing Desktop metadata json.",
+		                     &jsonUrl,
+
+		                     "output|o",
+		                     "Directory to save wallpapers.",
+		                     &outDir,
+
+		                     "no-pause|n",
+		                     "Disable pause at the end of the program.",
+		                     &noPause,
+
+		                     "force-check|f",
+		                     "Skip date validation and just download all wallpapers.",
+		                     &forceDownload,
+
+		                     "overwrite",
+		                     "Allow wallpapers to be re-downloaded and overwritten.",
+		                     &allowOverwrite,
+
+		                     "mode|m",
+		                     `Wallpaper selection mode. Valid options are "new" (first new wallpaper) and "newest". `
+		                     ~ `Default mode is "none"`,
+		                     &wallpaperMode);
 
 		if (result.helpWanted)
 		{
@@ -216,8 +216,8 @@ ubyte[32] hashFile(in string path)
 
 /// See isValidFilename in std.path
 Range makeValidFilename(Range)(Range filename)
-		if (((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range
-			&& isSomeChar!(ElementEncodingType!Range)) || isNarrowString!Range) && !isConvertibleToString!Range)
+	if (((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range))
+	     || isNarrowString!Range) && !isConvertibleToString!Range)
 {
 	Appender!Range result;
 
@@ -259,6 +259,7 @@ void downloadWallpapers()
 {
 	auto text = readText(jsonNew);
 	auto file = fromJSONString!(BingWallpaper[])(text);
+
 	string wallpaperFilename;
 
 	foreach (BingWallpaper i; file)
@@ -336,8 +337,8 @@ void setWallpaper(in string filename)
 		bool result;
 		for (size_t i; i < 4 && !result; i++)
 		{
-			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0,
-					cast(void*)filename.toStringz(), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) > 0;
+			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)filename.toStringz(),
+			                               SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) > 0;
 
 			if (!result)
 			{
@@ -351,7 +352,7 @@ void setWallpaper(in string filename)
 		import std.process : executeShell;
 
 		executeShell(`gsettings set org.gnome.desktop.background picture-uri "file://`
-				~ absolutePath(filename, "/") ~ `"`);
+		             ~ absolutePath(filename, "/") ~ `"`);
 	}
 	else
 	{
