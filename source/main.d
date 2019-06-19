@@ -171,7 +171,7 @@ int main(string[] args)
 		{
 			if (forceDownload || hashFile(jsonNew) != hashFile(jsonOld))
 			{
-				stdout.writeln("DoDownloads all available wallpapers.wnloading new images...");
+				stdout.writeln("Downloading new images...");
 				downloadWallpapers();
 			}
 			else
