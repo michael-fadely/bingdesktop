@@ -139,10 +139,10 @@ int main(string[] args)
 
 		if (result.helpWanted)
 		{
-			auto wangis = appender!string;
-			defaultGetoptFormatter(wangis, null, result.options);
+			auto optionsString = appender!string;
+			defaultGetoptFormatter(optionsString, null, result.options);
 			stdout.write(usageText);
-			wangis.data.splitLines().each!(x => stdout.writefln("\t%s", x));
+			optionsString.data.splitLines().each!(x => stdout.writefln("\t%s", x));
 			return 0;
 		}
 	}
@@ -329,20 +329,27 @@ void setWallpaper(in string filename)
 {
 	version (Windows)
 	{
-		import core.thread;
-		import core.sys.windows.windows;
+		import core.sys.windows.windows : SystemParametersInfoA,
+		                                  GetLastError;
+		import core.sys.windows.winuser : SPI_SETDESKWALLPAPER,
+		                                  SPIF_UPDATEINIFILE,
+		                                  SPIF_SENDCHANGE;
+		import core.thread              : Thread;
+		import core.time                : msecs;
 
 		wallpaperMode = WallpaperMode.none;
 
 		bool result;
 		for (size_t i; i < 4 && !result; i++)
 		{
-			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)filename.toStringz(),
+			auto stringz = absolutePath(filename).toStringz();
+			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)stringz,
 			                               SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) > 0;
 
 			if (!result)
 			{
-				stderr.writeln("Failed to set wallpaper.");
+				stderr.writefln("Failed to set wallpaper with error code %1$08X (%1$u)",
+				                GetLastError());
 				Thread.sleep(250.msecs);
 			}
 		}

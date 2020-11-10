@@ -1,0 +1,3 @@
+[submodule "dependencies/jsonizer"]
+	path = dependencies/jsonizer
+	url = https://github.com/rcorre/jsonizer.git
