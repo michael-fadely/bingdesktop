@@ -158,7 +158,6 @@ int main(string[] args)
 	{
 		if (key == "set-cookie")
 		{
-			stdout.writeln("storing cookie: ", value);
 			cookies ~= value.idup;
 		}
 	};
