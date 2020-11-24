@@ -33,42 +33,29 @@ struct BingWallpaper
 	mixin JsonizeMe;
 
 	@jsonize:
-	/// Incremental image ID.
-	uint id;
-	/// URL of the image.
+	string startdate;
+	string fullstartdate;
+	string enddate;
 	string url;
-	/// Simple image name.
-	string query;
-	/// Date the image was published.
-	string date;
-	/// Image category.
-	string category;
-	/// Image copyright.
+	string urlbase;
 	string copyright;
-	/// Image width.
-	uint width;
-	/// Image height.
-	uint height;
-	/// Image thumbnail URL.
-	string thumbnail;
-	/// Organization page.
-	string orgpage;
-	/// Image author.
-	string author;
-	/// Author homepage if applicable.
-	string authorlink;
-	/// Link for image license.
-	string licenselink;
-	/// Image title.
+	string copyrightlink;
 	string title;
-	/// Image license.
-	string license;
-	/// Thumbnail width.
-	string thnwidth;
-	/// Thumbnail height.
-	string thnheight;
-	/// Image checksum (unknown type).
-	string checksum;
+	string quiz;
+	/// Should use as wallpaper.
+	bool wp;
+	/// Hash of the image.
+	string hsh;
+	int drk;
+	int top;
+	int bot;
+	//string[] hs; // hotspots
+}
+
+struct BingWallpaperImages
+{
+	mixin JsonizeMe;
+	@jsonize BingWallpaper[] images;
 }
 
 /// File name/path to store the metadata json.
@@ -77,7 +64,7 @@ const string jsonNew = "bing-desktop.json";
 const string jsonOld = "bing-desktop.old";
 
 /// URL to pull the metadata json from.
-string jsonUrl = "http://az542455.vo.msecnd.net/bing/en-us";
+string jsonUrl = "https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=en-ww";
 /// Output directory to store the downloaded wallpapers.
 string outDir;
 
@@ -163,7 +150,23 @@ int main(string[] args)
 		rename(jsonNew, jsonOld);
 	}
 
-	download(jsonUrl, jsonNew);
+	string[] cookies;
+	auto http = HTTP();
+
+	// just so we can get cookies
+	http.onReceiveHeader = (in char[] key, in char[] value)
+	{
+		if (key == "set-cookie")
+		{
+			stdout.writeln("storing cookie: ", value);
+			cookies ~= value.idup;
+		}
+	};
+
+	download(jsonUrl, jsonNew, http);
+
+	// immediately removed
+	http.onReceiveHeader = null;
 
 	try
 	{
@@ -172,7 +175,7 @@ int main(string[] args)
 			if (forceDownload || hashFile(jsonNew) != hashFile(jsonOld))
 			{
 				stdout.writeln("Downloading new images...");
-				downloadWallpapers();
+				downloadWallpapers(cookies);
 			}
 			else
 			{
@@ -182,7 +185,7 @@ int main(string[] args)
 		}
 		else
 		{
-			downloadWallpapers();
+			downloadWallpapers(cookies);
 		}
 	}
 	catch (Exception ex)
@@ -255,41 +258,43 @@ Range makeValidFilename(Range)(Range filename)
 }
 
 /// Downloads all available wallpapers.
-void downloadWallpapers()
+void downloadWallpapers(in string[] cookies)
 {
 	auto text = readText(jsonNew);
-	auto file = fromJSONString!(BingWallpaper[])(text);
+	auto wallpaperImages = fromJSONString!(BingWallpaperImages)(text);
 
 	string wallpaperFilename;
 
-	foreach (BingWallpaper i; file)
+	foreach (BingWallpaper i; wallpaperImages.images)
 	{
-		if (i.date.empty)
+		if (i.startdate.empty)
 		{
 			stdout.writeln("Entry missing date!");
 			continue;
 		}
 
-		// Format is YYYY-MM-DD query.jpg
-		string name = format!("%s-%s-%s %s.jpg")(i.date[0 .. 4], i.date[4 .. 6], i.date[6 .. 8], i.query.strip());
+		// Format was YYYY-MM-DD query.jpg, now just YYYY-MM-DD.jpg
+		string name = format!("%s-%s-%s.jpg")(i.startdate[0 .. 4], i.startdate[4 .. 6], i.startdate[6 .. 8]);
 
 		name = makeValidFilename(name);
 
-		string oldpath = buildNormalizedPath(outDir, format!("%d.jpg")(i.id));
-		string newpath = buildNormalizedPath(outDir, name);
+		string newPath = buildNormalizedPath(outDir, name);
 
-		// If the file has been copied with its original ID name,
-		// rename it to "date query.jpg"
-		// e.g: 2014-09-17 A dredge boat near the Glénan Islands.jpg
-		if (exists(oldpath))
-		{
-			stdout.writefln("Renaming %d.jpg to %s", i.id, name);
-			rename(oldpath, newpath);
-		}
-		else if (allowOverwrite || !exists(newpath)) // Otherwise, we just try to download.
+		if (allowOverwrite || !exists(newPath))
 		{
 			stdout.writeln("Downloading: " ~ i.copyright);
-			download(i.url, newpath);
+
+			// note that you can also download a version without the watermark from bing.com/ ~ i.url;
+			const string actualUrl = "https://www.bing.com/hpwp/" ~ i.hsh;
+
+			auto http = HTTP();
+			http.addRequestHeader("content-type", "image/jpeg");
+			http.method = HTTP.Method.get;
+
+			string cookieString = cookies.join(";");
+			http.setCookie(cookieString);
+
+			download(actualUrl, newPath, http);
 
 			// The json is sorted newest to oldest.
 			// So if the wallpaper mode is set to newest, we set it upon download.
@@ -301,12 +306,12 @@ void downloadWallpapers()
 					break;
 
 				case WallpaperMode.newest:
-					wallpaperFilename = newpath;
+					wallpaperFilename = newPath;
 					wallpaperMode = WallpaperMode.none;
 					break;
 
 				case WallpaperMode.first:
-					wallpaperFilename = newpath;
+					wallpaperFilename = newPath;
 					break;
 			}
 		}

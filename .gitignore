@@ -7,3 +7,5 @@ __test__*__
 *.exe
 bing-desktop.json
 bing-desktop.old
+.vs/
+bingdesktop.sln
