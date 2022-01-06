@@ -81,7 +81,7 @@ private const string usageText =
 `Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
 
 Usage:
-	bingdesktop [options]
+	%s [options]
 
 Options:`;
 
@@ -126,10 +126,10 @@ int main(string[] args)
 
 		if (result.helpWanted)
 		{
+			const string formattedUsageText = format!(usageText)(baseName(args[0]));
 			auto optionsString = appender!string;
-			defaultGetoptFormatter(optionsString, null, result.options);
-			stdout.write(usageText);
-			optionsString.data.splitLines().each!(x => stdout.writefln("\t%s", x));
+			defaultGetoptFormatter(optionsString, formattedUsageText, result.options, "\t%*s %*s%*s%s\n");
+			stdout.writeln(optionsString.data);
 			return 0;
 		}
 	}
