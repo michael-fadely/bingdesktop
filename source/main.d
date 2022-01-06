@@ -279,7 +279,7 @@ void downloadWallpapers(in string[] cookies)
 
 		string newPath = buildNormalizedPath(outDir, name);
 
-		if (allowOverwrite || !exists(newPath))
+		if (allowOverwrite || !exists(newPath) || !getSize(newPath))
 		{
 			stdout.writeln("Downloading: " ~ i.copyright);
 
