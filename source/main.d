@@ -1,15 +1,19 @@
 module main;
 
-import std.algorithm.mutation;
+import core.thread : Thread;
+import core.time : msecs;
+
 import std.algorithm;
+import std.algorithm.mutation;
 import std.array;
 import std.digest.sha;
+import std.exception : enforce;
 import std.file;
 import std.getopt;
 import std.net.curl;
 import std.path;
-import std.range.primitives;
 import std.range;
+import std.range.primitives;
 import std.stdio;
 import std.string;
 import std.traits;
@@ -76,6 +80,10 @@ bool forceDownload;
 bool allowOverwrite;
 /// Wallpaper application mode for this session.
 auto wallpaperMode = WallpaperMode.newest;
+/// Number of times to retry any particular operation.
+const size_t globalMaxRetryCount = 4;
+/// Retry interval.
+const auto globalRetryInterval = 250.msecs;
 
 private const string usageText =
 `Lightweight multi-platform Bing Desktop client for downloading daily Bing wallpapers.
@@ -173,7 +181,7 @@ int main(string[] args)
 		{
 			if (forceDownload || hashFile(jsonNew) != hashFile(jsonOld))
 			{
-				stdout.writeln("Downloading new images...");
+				stdout.writeln("Downloading wallpapers...");
 				downloadWallpapers(cookies);
 			}
 			else
@@ -274,12 +282,18 @@ void downloadWallpapers(in string[] cookies)
 
 		// Format was YYYY-MM-DD query.jpg, now just YYYY-MM-DD.jpg
 		string name = format!("%s-%s-%s.jpg")(i.startdate[0 .. 4], i.startdate[4 .. 6], i.startdate[6 .. 8]);
-
 		name = makeValidFilename(name);
-
 		string newPath = buildNormalizedPath(outDir, name);
 
-		if (allowOverwrite || !exists(newPath) || !getSize(newPath))
+		const bool fileExists = exists(newPath);
+		bool sizeZero = fileExists && !getSize(newPath);
+
+		if (sizeZero)
+		{
+			stdout.writefln("Found 0 byte wallpaper. Repairing: " ~ i.copyright);
+		}
+
+		if (allowOverwrite || !fileExists || sizeZero)
 		{
 			stdout.writeln("Downloading: " ~ i.copyright);
 
@@ -293,7 +307,23 @@ void downloadWallpapers(in string[] cookies)
 			string cookieString = cookies.join(";");
 			http.setCookie(cookieString);
 
-			download(actualUrl, newPath, http);
+			size_t tries = 0;
+
+			while (true)
+			{
+				download(actualUrl, newPath, http);
+				sizeZero = !getSize(newPath);
+
+				if (sizeZero)
+				{
+					enforce(tries++ < globalMaxRetryCount, "Filesize was 0 bytes on every download attempt.");
+					stdout.writefln("Filesize was 0. Retrying... (%d/%d)", tries + 1, globalMaxRetryCount + 1);
+					Thread.sleep(globalRetryInterval);
+					continue;
+				}
+				
+				break;
+			}
 
 			// The json is sorted newest to oldest.
 			// So if the wallpaper mode is set to newest, we set it upon download.
@@ -338,13 +368,11 @@ void setWallpaper(in string filename)
 		import core.sys.windows.winuser : SPI_SETDESKWALLPAPER,
 		                                  SPIF_UPDATEINIFILE,
 		                                  SPIF_SENDCHANGE;
-		import core.thread              : Thread;
-		import core.time                : msecs;
 
 		wallpaperMode = WallpaperMode.none;
 
 		bool result;
-		for (size_t i; i < 4 && !result; i++)
+		for (size_t i; i < globalMaxRetryCount && !result; i++)
 		{
 			auto stringz = absolutePath(filename).toStringz();
 			result = SystemParametersInfoA(SPI_SETDESKWALLPAPER, 0, cast(void*)stringz,
@@ -352,9 +380,9 @@ void setWallpaper(in string filename)
 
 			if (!result)
 			{
-				stderr.writefln("Failed to set wallpaper with error code %1$08X (%1$u)",
-				                GetLastError());
-				Thread.sleep(250.msecs);
+				const auto error = GetLastError();
+				stderr.writefln("Failed to set wallpaper with error code %1$08X (%1$u)", error);
+				Thread.sleep(globalRetryInterval);
 			}
 		}
 	}
