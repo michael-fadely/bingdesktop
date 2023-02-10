@@ -68,7 +68,8 @@ const string jsonNew = "bing-desktop.json";
 const string jsonOld = "bing-desktop.old";
 
 /// URL to pull the metadata json from.
-string jsonUrl = "https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=en-ww";
+// redirected from: https://go.microsoft.com/fwlink/?linkid=2151983
+string jsonURL = "https://bingwallpaper.microsoft.com/api/BWC/getHPImages";
 /// Output directory to store the downloaded wallpapers.
 string outDir;
 
@@ -109,7 +110,7 @@ int main(string[] args)
 		auto result = getopt(args,
 		                     "url|u",
 		                     "The URL to the Bing Desktop metadata json.",
-		                     &jsonUrl,
+		                     &jsonURL,
 
 		                     "output|o",
 		                     "Directory to save wallpapers.",
@@ -170,7 +171,7 @@ int main(string[] args)
 		}
 	};
 
-	download(jsonUrl, jsonNew, http);
+	download(jsonURL, jsonNew, http);
 
 	// immediately removed
 	http.onReceiveHeader = null;
@@ -297,8 +298,8 @@ void downloadWallpapers(in string[] cookies)
 		{
 			stdout.writeln("Downloading: " ~ i.copyright);
 
-			// note that you can also download a version without the watermark from bing.com/ ~ i.url;
-			const string actualUrl = "https://www.bing.com/hpwp/" ~ i.hsh;
+			// note that you can also download a version without the watermark using `urlbase` instead of `url`
+			const string imageURL = i.url;
 
 			auto http = HTTP();
 			http.addRequestHeader("content-type", "image/jpeg");
@@ -311,7 +312,7 @@ void downloadWallpapers(in string[] cookies)
 
 			while (true)
 			{
-				download(actualUrl, newPath, http);
+				download(imageURL, newPath, http);
 				sizeZero = !getSize(newPath);
 
 				if (sizeZero)
